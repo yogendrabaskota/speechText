@@ -36,7 +36,7 @@ const AudioRecorder = () => {
   };
 
   // Stop recording
-  const handleRecordingStop = async () => {
+  const handleRecordingStop = () => {
     if (!mediaRecorderRef.current) return;
 
     // Stop the recording
@@ -47,12 +47,31 @@ const AudioRecorder = () => {
   // Send the recorded audio to the backend for transcription
   const handleTranscribeAudio = async () => {
     try {
+      if (audioChunks.length === 0) {
+        setError("No audio recorded.");
+        return;
+      }
+
       // Create a Blob from the recorded audio chunks
       const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
+
+      // Log the Blob details for debugging
+      console.log("Audio Blob:", audioBlob);
+      console.log("Blob Size (bytes):", audioBlob.size);
+      console.log("Blob Type:", audioBlob.type);
+
+      // Validate the blob size (e.g., prevent empty files)
+      if (audioBlob.size === 0) {
+        setError("Recorded audio is empty.");
+        return;
+      }
 
       // Create a FormData object and append the audio file
       const formData = new FormData();
       formData.append("file", audioBlob, "recording.wav");
+
+      // Log the FormData details
+      console.log("FormData:", formData.get("file"));
 
       // Send the audio file to the backend using fetch
       const response = await fetch("http://localhost:5000/transcribe", {
@@ -69,6 +88,7 @@ const AudioRecorder = () => {
       const result = await response.json();
       if (result.transcription) {
         setTranscription(result.transcription);
+        setError(""); // Clear previous errors if transcription is successful
       } else {
         throw new Error(result.error || "An unknown error occurred");
       }
